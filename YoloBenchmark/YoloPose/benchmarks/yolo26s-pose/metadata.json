@@ -1,0 +1,23 @@
+{
+  "model_path": "yolo26s-pose.pt",
+  "model_name": "yolo26s-pose",
+  "video_path": "videos/BenchmarkVideo.mp4",
+  "imgsz": 640,
+  "conf": 0.25,
+  "iou": 0.7,
+  "device": "cuda:0",
+  "video_info": {
+    "fps": 30.0,
+    "frame_count": 1417,
+    "width": 1920,
+    "height": 1080
+  },
+  "target_fps": 30.0,
+  "target_ms_per_frame": 33.3333,
+  "num_frames_processed": 1417,
+  "mean_inference_ms": 11.858,
+  "median_inference_ms": 10.3772,
+  "p95_inference_ms": 19.3454,
+  "effective_fps": 84.3312,
+  "meets_30hz_mean_budget": true
+}

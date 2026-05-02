@@ -1,0 +1,177 @@
+{
+  "evaluation_results": {
+    "yolo26l-pose": {
+      "reference_model": "yolo26x-pose",
+      "num_frames_compared": 1417,
+      "detection": {
+        "tp": 1417,
+        "fp": 5,
+        "fn": 4,
+        "precision": 0.9965,
+        "recall": 0.9972,
+        "f1": 0.9968
+      },
+      "bounding_boxes": {
+        "mean_iou": 0.9819,
+        "median_iou": 0.9844,
+        "p95_iou": 0.9935
+      },
+      "keypoints": {
+        "mean_distance_px": 11.92,
+        "median_distance_px": 9.95,
+        "mean_normalized_distance": 0.0087,
+        "comparable_keypoint_fraction": 0.4114,
+        "avg_detected_keypoints_per_match": 17.0,
+        "avg_visible_keypoints_per_match": 17.0,
+        "mean_keypoint_confidence": 0.9252
+      },
+      "temporal_stability": {
+        "mean_abs_count_delta": 0.01,
+        "mean_bbox_centroid_jitter": 4.53,
+        "mean_bbox_area_delta": 8272.0,
+        "mean_keypoint_jitter": 4.52,
+        "empty_frame_fraction": 0.0
+      },
+      "timing": {
+        "mean_inference_ms": 13.98,
+        "median_inference_ms": 13.64,
+        "p95_inference_ms": 15.96,
+        "effective_fps": 71.51,
+        "meets_30hz_mean": true,
+        "meets_30hz_p95": true
+      },
+      "final_score": 0.9665
+    },
+    "yolo26m-pose": {
+      "reference_model": "yolo26x-pose",
+      "num_frames_compared": 1417,
+      "detection": {
+        "tp": 1417,
+        "fp": 8,
+        "fn": 4,
+        "precision": 0.9944,
+        "recall": 0.9972,
+        "f1": 0.9958
+      },
+      "bounding_boxes": {
+        "mean_iou": 0.9794,
+        "median_iou": 0.9805,
+        "p95_iou": 0.991
+      },
+      "keypoints": {
+        "mean_distance_px": 13.0,
+        "median_distance_px": 9.9,
+        "mean_normalized_distance": 0.0095,
+        "comparable_keypoint_fraction": 0.4162,
+        "avg_detected_keypoints_per_match": 17.0,
+        "avg_visible_keypoints_per_match": 17.0,
+        "mean_keypoint_confidence": 0.9158
+      },
+      "temporal_stability": {
+        "mean_abs_count_delta": 0.01,
+        "mean_bbox_centroid_jitter": 4.69,
+        "mean_bbox_area_delta": 8722.0,
+        "mean_keypoint_jitter": 4.48,
+        "empty_frame_fraction": 0.0
+      },
+      "timing": {
+        "mean_inference_ms": 10.34,
+        "median_inference_ms": 9.97,
+        "p95_inference_ms": 12.26,
+        "effective_fps": 96.69,
+        "meets_30hz_mean": true,
+        "meets_30hz_p95": true
+      },
+      "final_score": 0.9631
+    },
+    "yolo26s-pose": {
+      "reference_model": "yolo26x-pose",
+      "num_frames_compared": 1417,
+      "detection": {
+        "tp": 1417,
+        "fp": 4,
+        "fn": 4,
+        "precision": 0.9972,
+        "recall": 0.9972,
+        "f1": 0.9972
+      },
+      "bounding_boxes": {
+        "mean_iou": 0.9675,
+        "median_iou": 0.9703,
+        "p95_iou": 0.987
+      },
+      "keypoints": {
+        "mean_distance_px": 15.83,
+        "median_distance_px": 11.96,
+        "mean_normalized_distance": 0.0115,
+        "comparable_keypoint_fraction": 0.4129,
+        "avg_detected_keypoints_per_match": 17.0,
+        "avg_visible_keypoints_per_match": 16.98,
+        "mean_keypoint_confidence": 0.9223
+      },
+      "temporal_stability": {
+        "mean_abs_count_delta": 0.01,
+        "mean_bbox_centroid_jitter": 4.97,
+        "mean_bbox_area_delta": 9018.0,
+        "mean_keypoint_jitter": 4.81,
+        "empty_frame_fraction": 0.0
+      },
+      "timing": {
+        "mean_inference_ms": 11.86,
+        "median_inference_ms": 10.38,
+        "p95_inference_ms": 19.35,
+        "effective_fps": 84.33,
+        "meets_30hz_mean": true,
+        "meets_30hz_p95": true
+      },
+      "final_score": 0.9547
+    },
+    "yolo26n-pose": {
+      "reference_model": "yolo26x-pose",
+      "num_frames_compared": 1417,
+      "detection": {
+        "tp": 1417,
+        "fp": 207,
+        "fn": 4,
+        "precision": 0.8725,
+        "recall": 0.9972,
+        "f1": 0.9307
+      },
+      "bounding_boxes": {
+        "mean_iou": 0.9461,
+        "median_iou": 0.9486,
+        "p95_iou": 0.9763
+      },
+      "keypoints": {
+        "mean_distance_px": 25.34,
+        "median_distance_px": 17.61,
+        "mean_normalized_distance": 0.0185,
+        "comparable_keypoint_fraction": 0.418,
+        "avg_detected_keypoints_per_match": 17.0,
+        "avg_visible_keypoints_per_match": 16.98,
+        "mean_keypoint_confidence": 0.9125
+      },
+      "temporal_stability": {
+        "mean_abs_count_delta": 0.12,
+        "mean_bbox_centroid_jitter": 5.22,
+        "mean_bbox_area_delta": 9710.0,
+        "mean_keypoint_jitter": 6.34,
+        "empty_frame_fraction": 0.0
+      },
+      "timing": {
+        "mean_inference_ms": 10.15,
+        "median_inference_ms": 9.32,
+        "p95_inference_ms": 15.59,
+        "effective_fps": 98.55,
+        "meets_30hz_mean": true,
+        "meets_30hz_p95": true
+      },
+      "final_score": 0.907
+    }
+  },
+  "summary": {
+    "num_models": 4,
+    "best_model": "yolo26l-pose",
+    "worst_model": "yolo26n-pose"
+  }
+}
