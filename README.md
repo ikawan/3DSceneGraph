@@ -5,7 +5,6 @@ This project explores how machines can *understand* what's happening in a scene 
 The goal?  
 Turn raw visual input into a structured representation that a robot could actually reason about.
 
----
 
 ## 🧠 What’s the idea?
 
@@ -17,7 +16,6 @@ We take video (or RGB-D data) of human actions — like cutting or stirring — 
 
 All of this is combined into a **scene graph** — basically a map of *who is doing what to what*.
 
----
 
 ## ⚙️ What’s inside?
 
@@ -28,7 +26,6 @@ This repo experiments with combining:
 - Segmentation → understanding object shapes  
 - Custom scripts → benchmarking + analysis  
 
----
 
 ## 🎯 Why does this matter?
 
@@ -37,14 +34,12 @@ Robots don’t just need to see — they need to **understand interactions**.
 Scene graphs help bridge the gap between:
 > pixels → meaning → action
 
----
 
 ## 🚧 Status
 
 Work in progress.  
 Lots of experiments, benchmarks, and “does this even work?” moments.
 
----
 
 ## 🧪 Bonus
 
@@ -53,13 +48,11 @@ There are also:
 - benchmarking pipelines
 - random outputs from experiments (some questionable 👀)
 
----
 
 ## 📝 Note
 
 This is part of a course project exploring **real-time 3D semantic scene graph generation for robot manipulation**.
 
----
 
 ## 🚀 Future direction
 
@@ -67,4 +60,3 @@ This is part of a course project exploring **real-time 3D semantic scene graph g
 - Better tracking consistency  
 - Eventually: something a robot could actually use  
 
----
