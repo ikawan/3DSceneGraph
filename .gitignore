@@ -5,7 +5,6 @@ __pycache__/
 *.so
 .Python
 build/
-develop-eggs/
 dist/
 downloads/
 eggs/
@@ -37,15 +36,33 @@ ENV/
 .DS_Store
 Thumbs.db
 
+# Data / models / large files
+*.pt
+*.pth
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.zip
+*.npy
+*.npz
+*.h5
+
 # Project specific
-.venv/
 .qodo/
 bimacs_rgbd/
 bimacs_rgbd.zip
-*.pt
 pictures/
 videos/
 OutputVids/
 debug_visualization/
 analysis_output/
 evaluation_output/
+
+# Cache / temp
+*.log
+*.tmp
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
