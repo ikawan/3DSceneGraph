@@ -8,12 +8,12 @@ from ultralytics import YOLO
 # =========================
 # Configuration
 # =========================
-VIDEO_PATH = "videos/BenchmarkVideo.mp4"
+VIDEO_PATH = "videos/signlang.mp4"
 
 POSE_MODEL_PATH = "yolo26m-pose.pt"
 SEG_MODEL_PATH = "yolo26m-seg.pt"
 
-OUTPUT_PATH = "videos/AllTogether.mp4"
+OUTPUT_PATH = "videos/signs.mp4"
 
 IMGSZ = 640
 CONF = 0.25

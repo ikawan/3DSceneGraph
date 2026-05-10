@@ -1,62 +1,80 @@
-# 🤖 Real-time Scene Understanding for Robot Manipulation
+# Real-time 3D Scene Graphs for Robot Manipulation
 
-This project explores how machines can *understand* what's happening in a scene — not just see it.
+This project builds RGB-D scene graphs from BIMACS cooking sequences. It combines
+YOLO segmentation, MediaPipe hand detection, temporal node tracking, depth-aware
+ROI filtering, and rule-based relation extraction.
 
-The goal?  
-Turn raw visual input into a structured representation that a robot could actually reason about.
+The main 3D scene graph pipeline lives in `3DGraph/`.
 
+## Repository Layout
 
-## 🧠 What’s the idea?
+- `3DGraph/scene_graph/` - importable pipeline modules
+- `3DGraph/scripts/` - command-line entry points
+- `3DGraph/outputs/` - generated files, ignored by Git
+- `YoloBenchmark/`, `YoloTests/`, `MediaPipeHands/` - supporting experiments
+- `allBenchmark.py`, `allGroundTruth.py` - project-level utilities
 
-We take video (or RGB-D data) of human actions — like cutting or stirring — and try to break it down into:
+## What Is Not Stored In Git
 
-- 🧍 Human pose (hands)
-- 🧊 Objects in the scene
-- 🔗 Relationships between them (e.g. *touching*, *above*, *moving together*)
+Large data and model artifacts are intentionally ignored:
 
-All of this is combined into a **scene graph** — basically a map of *who is doing what to what*.
+- `bimacs_rgbd/`
+- `bimacs_rgbd.zip`
+- `*.pt` YOLO weights
+- videos and generated outputs
+- `3DGraph/outputs/`
 
+To run the project on another PC, copy/download these assets separately.
 
-## ⚙️ What’s inside?
+Expected local assets include:
 
-This repo experiments with combining:
+- BIMACS data under `bimacs_rgbd/bimacs_rgbd_data/`
+- YOLO segmentation weights such as `yolo26m-seg.pt`
+- optional pose weights if using the older benchmark utilities
 
-- YOLO → object detection  
-- Pose estimation → tracking human movement  
-- Segmentation → understanding object shapes  
-- Custom scripts → benchmarking + analysis  
+## Setup On A New PC
 
+```powershell
+git clone <your-repo-url>
+cd Yolo
 
-## 🎯 Why does this matter?
+python -m venv .venv
+.\.venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-Robots don’t just need to see — they need to **understand interactions**.
+Then place the ignored assets in the same relative locations used by the config:
 
-Scene graphs help bridge the gap between:
-> pixels → meaning → action
+```text
+bimacs_rgbd/bimacs_rgbd_data/
+yolo26m-seg.pt
+```
 
+If you want GPU inference, install a CUDA-compatible PyTorch build for the new
+machine before running the pipeline.
 
-## 🚧 Status
+## Run One Frame
 
-Work in progress.  
-Lots of experiments, benchmarks, and “does this even work?” moments.
+```powershell
+.\.venv\Scripts\python.exe 3DGraph/scripts/run_single_frame.py
+```
 
+## Run A Stream Batch
 
-## 🧪 Bonus
+```powershell
+.\.venv\Scripts\python.exe 3DGraph/scripts/run_stream_batch.py --num-takes 1 --max-frames-per-take 20
+```
 
-There are also:
-- test scripts
-- benchmarking pipelines
-- random outputs from experiments (some questionable 👀)
+## Visualize Results
 
+```powershell
+.\.venv\Scripts\python.exe 3DGraph/scripts/visualize_single.py --graph 3DGraph/outputs/scene_graph_single_frame/scene_graph_frame_72.json
+.\.venv\Scripts\python.exe 3DGraph/scripts/visualize_stream.py --take take_0
+```
 
-## 📝 Note
+## Notes
 
-This is part of a course project exploring **real-time 3D semantic scene graph generation for robot manipulation**.
-
-
-## 🚀 Future direction
-
-- Real-time pipeline integration  
-- Better tracking consistency  
-- Eventually: something a robot could actually use  
-
+The default pipeline ignores table detections, excludes person nodes from
+relations, tracks object/hand nodes across frames, caps active hands to two, and
+generates relation edges such as `near`, `touching`, `above`, and
+`hand_near_object`.

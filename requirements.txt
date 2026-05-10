@@ -3,3 +3,4 @@ mediapipe
 ultralytics
 numpy
 tqdm
+open3d

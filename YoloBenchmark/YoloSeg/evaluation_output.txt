@@ -1,0 +1,7 @@
+Ground Truth Boxes:
+  Class: bowl, Center: (0.480, 0.642), Size: (0.158, 0.165)
+  Class: bottle, Center: (0.603, 0.623), Size: (0.041, 0.201)
+
+Predicted Boxes:
+  Class: bowl, Center: (0.482, 0.640), Size: (0.152, 0.155), Conf: 0.958
+  Class: bottle, Center: (0.603, 0.623), Size: (0.039, 0.192), Conf: 0.911
