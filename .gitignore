@@ -50,6 +50,8 @@ Thumbs.db
 
 # Project specific
 .qodo/
+datasets/
+runs/
 bimacs_rgbd/
 bimacs_rgbd.zip
 3DGraph/outputs/
@@ -59,6 +61,7 @@ OutputVids/
 debug_visualization/
 analysis_output/
 evaluation_output/
+darknet/
 
 # Cache / temp
 *.log

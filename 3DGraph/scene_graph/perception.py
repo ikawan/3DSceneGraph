@@ -7,6 +7,7 @@ from ultralytics import YOLO
 from . import geometry
 from .config import DEFAULT_CONFIG
 from .schemas import make_node
+from .tracking import TRACKING_MASK_KEY
 from .io import resolve_path
 
 
@@ -51,6 +52,9 @@ def node_type_for_class(class_name, config=DEFAULT_CONFIG):
 
 def should_ignore_detection_class(class_name, config=DEFAULT_CONFIG):
     lower = str(class_name).lower()
+    ignored_classes = {str(value).lower() for value in config.perception.ignored_detection_classes}
+    if lower in ignored_classes:
+        return True
     return config.perception.ignore_table_detections and lower in config.perception.table_classes
 
 
@@ -119,7 +123,7 @@ def make_yolo_node(node_id, class_name, confidence, bbox_2d, mask, depth_m, intr
         return None, "no valid depth values inside mask"
 
     geometry_3d = geometry.summarize_3d_points(points_3d, config)
-    return make_node(
+    node = make_node(
         node_id=node_id,
         class_name=class_name,
         node_type=node_type_for_class(class_name, config),
@@ -131,7 +135,9 @@ def make_yolo_node(node_id, class_name, confidence, bbox_2d, mask, depth_m, intr
         bbox_3d_m=geometry_3d["bbox_3d_m"],
         confidence=float(confidence),
         attributes={"mask_area": mask_area},
-    ), None
+    )
+    node[TRACKING_MASK_KEY] = mask.astype(bool)
+    return node, None
 
 
 def detection_node_id(node_type, counters):
@@ -155,7 +161,15 @@ def detect_scene_nodes(
     model = model or load_yolo_model(config)
     result = model.predict(rgb_image, device=config.runtime.device, verbose=verbose)[0]
     if result.masks is None:
-        raise RuntimeError("YOLO produced no segmentation masks for this frame.")
+        roi_filter = {
+            "enabled": False,
+            "method": "person_depth_barrier",
+            "failure_reason": "yolo_produced_no_segmentation_masks",
+        }
+        diagnostics = {"skipped_yolo_detections": [("frame", None, roi_filter["failure_reason"])]}
+        if return_diagnostics:
+            return [], roi_filter, diagnostics
+        return []
 
     masks = result.masks.data.cpu().numpy()
     boxes = result.boxes
@@ -172,17 +186,35 @@ def detect_scene_nodes(
             "mask": geometry.resize_mask(mask, (h, w)),
         })
 
-    person_front_depth, _, roi_mask, roi_filter = compute_person_depth_barrier(detections, depth_image, config)
+    try:
+        person_front_depth, _, roi_mask, roi_filter = compute_person_depth_barrier(detections, depth_image, config)
+        use_person_depth_barrier = True
+    except RuntimeError as exc:
+        if not config.tracking.enabled:
+            raise
+        person_front_depth = None
+        roi_mask = geometry.valid_depth_mask(depth_image, config)
+        roi_filter = {
+            "enabled": False,
+            "method": "person_depth_barrier",
+            "failure_reason": str(exc),
+            "fallback": "valid_depth_mask_for_xmem_tracking",
+        }
+        use_person_depth_barrier = False
 
     nodes = []
     skipped = []
     counters = {}
     for det in detections:
         if should_ignore_detection_class(det["class_name"], config):
-            skipped.append((det["det_index"], det["class_name"], "ignored table detection by config"))
+            skipped.append((det["det_index"], det["class_name"], "ignored detection class by config"))
             continue
 
-        filtered_mask, filter_reason = filter_detection_mask(det, depth_image, roi_mask, person_front_depth, config)
+        if use_person_depth_barrier:
+            filtered_mask, filter_reason = filter_detection_mask(det, depth_image, roi_mask, person_front_depth, config)
+        else:
+            filtered_mask = geometry.clean_mask_by_depth(det["mask"] & roi_mask, depth_image, config)
+            filter_reason = None
         if filter_reason is not None:
             skipped.append((det["det_index"], det["class_name"], filter_reason))
             continue

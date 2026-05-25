@@ -6,6 +6,32 @@ import numpy as np
 from . import geometry
 from .config import DEFAULT_CONFIG
 from .schemas import make_node
+from .tracking import TRACKING_MASK_KEY
+
+
+HAND_CONNECTIONS = (
+    (0, 1),
+    (1, 2),
+    (2, 3),
+    (3, 4),
+    (0, 5),
+    (5, 6),
+    (6, 7),
+    (7, 8),
+    (5, 9),
+    (9, 10),
+    (10, 11),
+    (11, 12),
+    (9, 13),
+    (13, 14),
+    (14, 15),
+    (15, 16),
+    (13, 17),
+    (17, 18),
+    (18, 19),
+    (19, 20),
+    (0, 17),
+)
 
 
 def create_hand_processor(config=DEFAULT_CONFIG, static_image_mode=True):
@@ -47,7 +73,11 @@ def normalize_handedness_label(label, config=DEFAULT_CONFIG):
 
 
 def hand_node_id(label, counters):
-    base = f"{label.lower()}_hand"
+    label = str(label or "hand").lower()
+    if label == "hand" or label.endswith("_hand"):
+        base = label
+    else:
+        base = f"{label}_hand"
     counters[base] = counters.get(base, 0) + 1
     if counters[base] == 1:
         return base
@@ -116,12 +146,59 @@ def disambiguate_duplicate_hand_labels(nodes, config=DEFAULT_CONFIG):
     ]
 
 
+def hand_landmark_mask(landmarks_2d, image_shape_hw, config=DEFAULT_CONFIG):
+    h, w = image_shape_hw
+    mask = np.zeros((h, w), dtype=np.uint8)
+    if not landmarks_2d:
+        return mask.astype(bool)
+
+    points = np.asarray(landmarks_2d, dtype=np.float32)
+    if points.ndim != 2 or points.shape[1] != 2:
+        return mask.astype(bool)
+
+    points_int = np.round(points).astype(np.int32)
+    points_int[:, 0] = np.clip(points_int[:, 0], 0, w - 1)
+    points_int[:, 1] = np.clip(points_int[:, 1], 0, h - 1)
+
+    if len(points_int) >= 3:
+        hull = cv2.convexHull(points_int)
+        cv2.fillConvexPoly(mask, hull, 255)
+
+    thickness = max(1, int(config.hands.hand_mask_connection_thickness_px))
+    radius = max(1, int(config.hands.hand_mask_landmark_radius_px))
+    for start, end in HAND_CONNECTIONS:
+        if start < len(points_int) and end < len(points_int):
+            cv2.line(mask, tuple(points_int[start]), tuple(points_int[end]), 255, thickness)
+
+    for point in points_int:
+        cv2.circle(mask, tuple(point), radius, 255, -1)
+
+    dilation = max(0, int(config.hands.hand_mask_dilation_px))
+    if dilation > 0:
+        kernel_size = dilation * 2 + 1
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (kernel_size, kernel_size))
+        mask = cv2.dilate(mask, kernel)
+
+    return mask.astype(bool)
+
+
 def make_hand_node(node_id, hand_landmarks, handedness, image_shape_hw, depth_m, intrinsics, config=DEFAULT_CONFIG):
-    raw_label = handedness.classification[0].label
-    label = normalize_handedness_label(raw_label, config)
-    confidence = float(handedness.classification[0].score)
+    raw_label = None
+    confidence = 1.0
+    if handedness is not None and getattr(handedness, "classification", None):
+        raw_label = handedness.classification[0].label
+        confidence = float(handedness.classification[0].score)
+
+    if config.hands.use_mediapipe_handedness and raw_label is not None:
+        label = normalize_handedness_label(raw_label, config)
+        class_name = f"{label.lower()}_hand"
+    else:
+        label = None
+        class_name = "hand"
+
     landmarks_2d = hand_landmarks_to_pixels(hand_landmarks, image_shape_hw)
     landmarks_np = np.array(landmarks_2d, dtype=np.float32)
+    tracking_mask = hand_landmark_mask(landmarks_2d, image_shape_hw, config)
 
     center_2d = [float(landmarks_np[:, 0].mean()), float(landmarks_np[:, 1].mean())]
     bbox_2d = [
@@ -140,9 +217,18 @@ def make_hand_node(node_id, hand_landmarks, handedness, image_shape_hw, depth_m,
     if median_depth_m is None:
         return None, f"{label} hand has no valid depth near landmark center"
 
-    return make_node(
+    attributes = {
+        "landmarks_2d": landmarks_2d,
+        "raw_handedness_label": raw_label,
+        "normalized_handedness_label": label,
+        "handedness_was_swapped": bool(label and config.hands.swap_mediapipe_handedness),
+        "handedness_source": "mediapipe" if label else "tracker",
+        "tracking_mask_area": int(tracking_mask.sum()),
+    }
+
+    node = make_node(
         node_id=node_id,
-        class_name=f"{label.lower()}_hand",
+        class_name=class_name,
         node_type="hand",
         source_model="mediapipe_hands",
         bbox_2d=bbox_2d,
@@ -151,13 +237,10 @@ def make_hand_node(node_id, hand_landmarks, handedness, image_shape_hw, depth_m,
         median_depth_m=median_depth_m,
         bbox_3d_m=None,
         confidence=confidence,
-        attributes={
-            "landmarks_2d": landmarks_2d,
-            "raw_handedness_label": raw_label,
-            "normalized_handedness_label": label,
-            "handedness_was_swapped": config.hands.swap_mediapipe_handedness,
-        },
-    ), None
+        attributes=attributes,
+    )
+    node[TRACKING_MASK_KEY] = tracking_mask
+    return node, None
 
 
 def detect_hand_nodes(
@@ -186,9 +269,13 @@ def detect_hand_nodes(
         return (nodes, {"skipped_hands": skipped}) if return_diagnostics else nodes
 
     counters = {}
+    handedness_items = getattr(results, "multi_handedness", None) or []
     for hand_index, hand_landmarks in enumerate(results.multi_hand_landmarks):
-        handedness = results.multi_handedness[hand_index]
-        normalized_label = normalize_handedness_label(handedness.classification[0].label, config)
+        handedness = handedness_items[hand_index] if hand_index < len(handedness_items) else None
+        if config.hands.use_mediapipe_handedness and handedness is not None:
+            normalized_label = normalize_handedness_label(handedness.classification[0].label, config)
+        else:
+            normalized_label = "hand"
         node, reason = make_hand_node(
             node_id=hand_node_id(normalized_label, counters),
             hand_landmarks=hand_landmarks,
@@ -217,8 +304,9 @@ def detect_hand_nodes(
         )
         nodes = [node for index, node in enumerate(nodes) if index in keep_indices]
 
-    nodes, disambiguation_diag = disambiguate_duplicate_hand_labels(nodes, config)
-    skipped.extend(disambiguation_diag)
+    if config.hands.use_mediapipe_handedness:
+        nodes, disambiguation_diag = disambiguate_duplicate_hand_labels(nodes, config)
+        skipped.extend(disambiguation_diag)
 
     if return_diagnostics:
         return nodes, {"skipped_hands": skipped}

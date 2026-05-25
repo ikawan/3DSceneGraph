@@ -7,6 +7,7 @@ from .hands import detect_hand_nodes
 from .perception import detect_scene_nodes
 from .relations import extract_relations
 from .schemas import make_scene_graph, validate_scene_graph
+from .tracking import strip_tracking_payloads
 
 
 def build_scene_graph_from_arrays(
@@ -44,8 +45,16 @@ def build_scene_graph_from_arrays(
 
     nodes = scene_nodes + hand_nodes
     if tracker is not None:
-        nodes, tracking_diag = tracker.update(nodes, frame_id=frame_id, timestamp=timestamp)
+        nodes, tracking_diag = tracker.update(
+            nodes,
+            frame_id=frame_id,
+            timestamp=timestamp,
+            rgb_image=rgb_image,
+            depth_image=depth_image,
+            intrinsics=intrinsics,
+        )
     else:
+        nodes = strip_tracking_payloads(nodes)
         tracking_diag = {"enabled": False}
 
     edges = extract_relations(nodes, previous_graph=previous_graph, config=config)

@@ -45,6 +45,7 @@ class PerceptionConfig:
     bbox_3d_percentile_high: float = 95.0
     table_classes: tuple[str, ...] = ("dining table", "table")
     ignore_table_detections: bool = True
+    ignored_detection_classes: tuple[str, ...] = ("tv",)
 
 
 @dataclass
@@ -54,13 +55,20 @@ class HandConfig:
     detection_confidence: float = 0.5
     tracking_confidence: float = 0.5
     depth_sample_radius_px: int = 6
+    use_mediapipe_handedness: bool = False
     swap_mediapipe_handedness: bool = True
     disambiguate_duplicate_handedness: bool = True
+    image_left_hand_label: str = "right_hand"
+    image_right_hand_label: str = "left_hand"
+    hand_mask_landmark_radius_px: int = 14
+    hand_mask_connection_thickness_px: int = 10
+    hand_mask_dilation_px: int = 8
 
 
 @dataclass
 class TrackingConfig:
     enabled: bool = True
+    backend: str = "xmem"
     certainty_threshold: float = 0.55
     max_missing_frames: int = 15
     max_hand_tracks: int = 2
@@ -74,6 +82,20 @@ class TrackingConfig:
     hand_max_2d_center_distance_px: float = 180.0
     depth_similarity_m: float = 0.50
     min_observation_confidence: float = 0.20
+    xmem_repo_path: str = "XMem"
+    xmem_checkpoint_path: str = "XMem/saves/XMem.pth"
+    xmem_size: int = 480
+    xmem_top_k: int = 30
+    xmem_mem_every: int = 5
+    xmem_deep_update_every: int = -1
+    xmem_enable_long_term: bool = True
+    xmem_enable_long_term_count_usage: bool = True
+    xmem_num_prototypes: int = 128
+    xmem_min_mid_term_frames: int = 5
+    xmem_max_mid_term_frames: int = 10
+    xmem_max_long_term_elements: int = 10000
+    xmem_min_mask_area_pixels: int = 25
+    xmem_amp: bool = True
 
 
 @dataclass
@@ -101,9 +123,12 @@ class StreamConfig:
 
 @dataclass
 class VisualizationConfig:
-    playback_fps: int = 10
+    playback_fps: int = 30
     loop_playback: bool = True
     max_frames: int | None = None
+    show_rgb_frame: bool = True
+    show_rgb_overlays: bool = False
+    rgb_preview_max_width_px: int = 960
     show_edges: bool = True
     show_edge_labels: bool = True
     show_3d_boxes: bool = True

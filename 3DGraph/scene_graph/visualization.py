@@ -12,10 +12,11 @@ except ImportError as exc:
     raise RuntimeError("Open3D is required for visualization. Install it with: pip install open3d") from exc
 
 from .config import DEFAULT_CONFIG
-from .io import load_graph_json, resolve_path
+from .io import load_graph_json, load_rgb_image, resolve_path
 
 
 DEFAULT_COLOR = [0.8, 0.8, 0.8]
+RGB_WINDOW_NAME = "RGB Frame"
 CLASS_COLORS = {
     "person": [0.1, 0.35, 1.0],
     "dining table": [1.0, 0.65, 0.05],
@@ -147,6 +148,119 @@ def display_label_name(class_name):
     return class_name.replace("_", " ")
 
 
+def cv_color_from_rgb(color):
+    color = [max(0.0, min(1.0, float(value))) for value in color]
+    return tuple(int(round(255.0 * value)) for value in color[::-1])
+
+
+def readable_text_color(bgr_color):
+    b, g, r = bgr_color
+    luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
+    return (0, 0, 0) if luminance > 0.62 else (255, 255, 255)
+
+
+def draw_text_with_background(image, text, origin, background_color, font_scale=0.5, thickness=1):
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    text_size, baseline = cv2.getTextSize(text, font, font_scale, thickness)
+    x, y = int(origin[0]), int(origin[1])
+    h, w = image.shape[:2]
+    x = max(0, min(x, max(0, w - text_size[0] - 8)))
+    y = max(text_size[1] + 6, min(y, h - baseline - 4))
+    top_left = (x, y - text_size[1] - 6)
+    bottom_right = (x + text_size[0] + 8, y + baseline + 4)
+    cv2.rectangle(image, top_left, bottom_right, background_color, -1)
+    cv2.putText(
+        image,
+        text,
+        (x + 4, y),
+        font,
+        font_scale,
+        readable_text_color(background_color),
+        thickness,
+        cv2.LINE_AA,
+    )
+
+
+def graph_rgb_path(graph):
+    metadata = graph.get("metadata", {})
+    for key in ("rgb_path", "image_path", "frame_path"):
+        value = metadata.get(key)
+        if value:
+            return value
+    return None
+
+
+def missing_rgb_preview(graph_path, graph):
+    image = np.full((360, 640, 3), 255, dtype=np.uint8)
+    frame_id = graph.get("frame_id", Path(graph_path).stem)
+    draw_text_with_background(image, f"No RGB frame path for frame {frame_id}", (24, 56), (225, 225, 225))
+    draw_text_with_background(image, "Expected metadata.rgb_path in the graph JSON", (24, 96), (225, 225, 225))
+    return image
+
+
+def resize_preview(image, config=DEFAULT_CONFIG):
+    max_width = int(config.visualization.rgb_preview_max_width_px)
+    if max_width <= 0 or image.shape[1] <= max_width:
+        return image
+    scale = max_width / float(image.shape[1])
+    new_size = (max_width, max(1, int(round(image.shape[0] * scale))))
+    return cv2.resize(image, new_size, interpolation=cv2.INTER_AREA)
+
+
+def finite_float_list(values, length):
+    if not isinstance(values, list) or len(values) != length:
+        return None
+    try:
+        array = np.asarray(values, dtype=np.float64)
+    except (TypeError, ValueError):
+        return None
+    if array.shape != (length,) or not np.all(np.isfinite(array)):
+        return None
+    return array.tolist()
+
+
+def draw_rgb_overlays(image, graph):
+    output = image.copy()
+    nodes = graph.get("nodes", [])
+    for node in nodes:
+        class_name = str(node.get("class_name", "node"))
+        color = cv_color_from_rgb(node_color(class_name))
+        label_anchor = None
+
+        center = finite_float_list(node.get("center_2d"), 2)
+        if center is not None:
+            cx, cy = [int(round(float(value))) for value in center]
+            cv2.circle(output, (cx, cy), 5, color, -1)
+            if label_anchor is None:
+                label_anchor = (cx + 8, cy - 8)
+
+        if label_anchor is not None:
+            label = str(node.get("id") or class_name)
+            draw_text_with_background(output, label, label_anchor, color, font_scale=0.48)
+
+    frame_id = graph.get("frame_id", "unknown")
+    tracking = graph.get("metadata", {}).get("tracking", {})
+    backend = tracking.get("backend") if tracking.get("enabled") else "no tracking"
+    summary = f"frame {frame_id} | nodes {len(nodes)} | {backend}"
+    draw_text_with_background(output, summary, (12, 30), (245, 245, 245), font_scale=0.55)
+    return output
+
+
+def build_rgb_preview(graph, graph_path, config=DEFAULT_CONFIG):
+    path = graph_rgb_path(graph)
+    if path is None:
+        return missing_rgb_preview(graph_path, graph)
+    try:
+        image = load_rgb_image(path)
+    except FileNotFoundError:
+        image = missing_rgb_preview(graph_path, graph)
+        draw_text_with_background(image, f"Could not load: {path}", (24, 136), (225, 225, 225))
+        return image
+    if config.visualization.show_rgb_overlays:
+        image = draw_rgb_overlays(image, graph)
+    return resize_preview(image, config)
+
+
 def assign_display_labels(nodes):
     class_counts = {}
     for node in nodes:
@@ -198,7 +312,7 @@ def create_label_point_cloud(text, anchor, config=DEFAULT_CONFIG, color=None):
     ))
     label = o3d.geometry.PointCloud()
     label.points = o3d.utility.Vector3dVector(points)
-    label_color = color or [1.0, 1.0, 1.0]
+    label_color = color or [0.02, 0.02, 0.02]
     label.colors = o3d.utility.Vector3dVector(np.tile(label_color, (points.shape[0], 1)))
     return label
 
@@ -259,7 +373,7 @@ def build_frame_geometries(nodes, edges=None, config=DEFAULT_CONFIG):
 
 def setup_view(vis):
     render_options = vis.get_render_option()
-    render_options.background_color = np.array([0.02, 0.02, 0.025])
+    render_options.background_color = np.array([1.0, 1.0, 1.0])
     render_options.line_width = 2.0
     render_options.point_size = 2.0
     view = vis.get_view_control()
@@ -283,12 +397,14 @@ def print_frame_summary(graph_path, graph, nodes, edges, skipped_nodes, skipped_
 def show_stream(graph_files, config=DEFAULT_CONFIG):
     vis = o3d.visualization.Visualizer()
     vis.create_window(window_name="3D Scene Graph Stream", width=1280, height=800)
+    if config.visualization.show_rgb_frame:
+        cv2.namedWindow(RGB_WINDOW_NAME, cv2.WINDOW_NORMAL)
     frame_delay = 1.0 / max(config.visualization.playback_fps, 1)
     frame_index = 0
     initialized_view = False
 
     print(f"Loaded {len(graph_files)} graph frames.")
-    print("Close the Open3D window to stop playback.")
+    print("Close the Open3D window, or press q/escape in the RGB window, to stop playback.")
 
     try:
         while True:
@@ -308,6 +424,11 @@ def show_stream(graph_files, config=DEFAULT_CONFIG):
                 initialized_view = True
             if config.visualization.print_frame_summary:
                 print_frame_summary(graph_path, graph, nodes, edges, skipped, skipped_edges)
+            if config.visualization.show_rgb_frame:
+                cv2.imshow(RGB_WINDOW_NAME, build_rgb_preview(graph, graph_path, config))
+                key = cv2.waitKey(1) & 0xFF
+                if key in (27, ord("q")):
+                    break
             if not vis.poll_events():
                 break
             vis.update_renderer()
@@ -321,6 +442,11 @@ def show_stream(graph_files, config=DEFAULT_CONFIG):
                     break
     finally:
         vis.destroy_window()
+        if config.visualization.show_rgb_frame:
+            try:
+                cv2.destroyWindow(RGB_WINDOW_NAME)
+            except cv2.error:
+                pass
 
 
 def summarize_graph(graph_path, graph, nodes, edges, skipped_nodes=None, skipped_edges=None):
@@ -367,6 +493,10 @@ def show_graph(graph, graph_path="<memory>", screenshot_path=None, show_window=T
         setup_view(vis)
         vis.poll_events()
         vis.update_renderer()
+        if show_window and config.visualization.show_rgb_frame:
+            cv2.namedWindow(RGB_WINDOW_NAME, cv2.WINDOW_NORMAL)
+            cv2.imshow(RGB_WINDOW_NAME, build_rgb_preview(graph, graph_path, config))
+            cv2.waitKey(1)
 
         if screenshot_path is not None:
             screenshot_path = resolve_path(screenshot_path)
@@ -379,6 +509,11 @@ def show_graph(graph, graph_path="<memory>", screenshot_path=None, show_window=T
             vis.run()
     finally:
         vis.destroy_window()
+        if show_window and config.visualization.show_rgb_frame:
+            try:
+                cv2.destroyWindow(RGB_WINDOW_NAME)
+            except cv2.error:
+                pass
 
 
 def show_graph_file(graph_path, screenshot_path=None, show_window=True, config=DEFAULT_CONFIG):

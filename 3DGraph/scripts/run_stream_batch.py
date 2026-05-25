@@ -27,6 +27,12 @@ def parse_args():
     parser.add_argument("--tracking-certainty-threshold", type=float, default=config.tracking.certainty_threshold)
     parser.add_argument("--tracking-max-missing-frames", type=int, default=config.tracking.max_missing_frames)
     parser.add_argument("--tracking-max-hand-tracks", type=int, default=config.tracking.max_hand_tracks)
+    parser.add_argument("--xmem-repo", default=config.tracking.xmem_repo_path)
+    parser.add_argument("--xmem-checkpoint", default=config.tracking.xmem_checkpoint_path)
+    parser.add_argument("--xmem-size", type=int, default=config.tracking.xmem_size)
+    parser.add_argument("--use-mediapipe-handedness", action="store_true")
+    parser.add_argument("--image-left-hand-label", choices=("left_hand", "right_hand"), default=config.hands.image_left_hand_label)
+    parser.add_argument("--image-right-hand-label", choices=("left_hand", "right_hand"), default=config.hands.image_right_hand_label)
     parser.add_argument("--no-relations", action="store_true")
     parser.add_argument("--keep-existing", action="store_true")
     return parser.parse_args()
@@ -51,6 +57,12 @@ def main():
     config.tracking.certainty_threshold = args.tracking_certainty_threshold
     config.tracking.max_missing_frames = args.tracking_max_missing_frames
     config.tracking.max_hand_tracks = args.tracking_max_hand_tracks
+    config.tracking.xmem_repo_path = args.xmem_repo
+    config.tracking.xmem_checkpoint_path = args.xmem_checkpoint
+    config.tracking.xmem_size = args.xmem_size
+    config.hands.use_mediapipe_handedness = args.use_mediapipe_handedness
+    config.hands.image_left_hand_label = args.image_left_hand_label
+    config.hands.image_right_hand_label = args.image_right_hand_label
     config.relations.enabled = not args.no_relations
 
     index, index_path = process_first_task_takes(config)
