@@ -62,6 +62,9 @@ debug_visualization/
 analysis_output/
 evaluation_output/
 darknet/
+XMem/
+segmentation_training/
+MediaPipeHands/
 
 # Cache / temp
 *.log
