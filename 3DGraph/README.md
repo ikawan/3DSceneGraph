@@ -5,7 +5,7 @@ entry points:
 
 - `scene_graph/` contains the pipeline modules.
 - `scripts/` contains runnable CLIs.
-- `outputs/` contains generated graphs, debug artifacts, and calibration files.
+- `outputs/` contains generated graphs, debug artifacts, and calibration files (gitignored).
 
 ## Architecture
 
@@ -85,18 +85,6 @@ metadata contains `rgb_path`. The RGB preview shows the raw frame by default.
 Use `--hide-rgb-frame` to return to the Open3D-only view, or
 `--show-rgb-overlays` to draw graph centers and labels over the frame.
 
-## XMem Setup
-
-Temporal tracking expects the official XMem repository and checkpoint:
-
-```powershell
-git clone https://github.com/hkchengrex/XMem.git XMem
-pip install -r XMem/requirements.txt
-```
-
-Download `XMem.pth` from the XMem v1.0 release and place it at
-`XMem/saves/XMem.pth`, or point the scripts at custom paths with
-`--xmem-repo` and `--xmem-checkpoint`.
 
 ## Graph Format
 

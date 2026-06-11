@@ -1,6 +1,23 @@
-opencv-python
-mediapipe
-ultralytics
-numpy
-tqdm
-open3d
+# Core Deep Learning and Computer Vision
+torch>=2.0.0
+torchvision>=0.15.0
+ultralytics>=8.0.0
+opencv-python>=4.8.0
+numpy>=1.24.0,<2.0  # MediaPipe compatibility
+scipy>=1.10.0
+Pillow>=9.5.0
+
+# Hand and Pose Detection
+# Note: MediaPipe has limited version support. Use a version compatible with your Python
+# Python 3.9-3.11: mediapipe>=0.10.0 (recommended)
+# Python 3.12+: Use mediapipe with platform-specific wheels or use numpy<2.0
+mediapipe>=0.10.0
+open3d>=0.17.0
+
+# Utilities
+tqdm>=4.65.0
+pyyaml>=6.0
+
+# Optional: For tracking (XMem)
+# Install XMem separately: git clone https://github.com/hkchengrex/XMem.git XMem
+# Then: pip install -r XMem/requirements.txt
